@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book of Mormon Locations Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map { height: 600px; width: 100%; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+        .controls { margin-bottom: 10px; }
+        select, input[type="range"] { padding: 5px; margin-right: 10px; }
+        label { margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <label for="zarahemlaSelect">Select Zarahemla Location:</label>
+        <select id="zarahemlaSelect" onchange="setZarahemla(this.value)">
+            <option value="Montrose, IA">Montrose, IA</option>
+            <option value="Chillicothe, OH">Chillicothe, OH</option>
+            <option value="Nauvoo, IL (opposite)">Nauvoo, IL (opposite)</option>
+            <option value="Cahokia, IL">Cahokia, IL</option>
+            <option value="Buffalo, NY">Buffalo, NY</option>
+            <option value="Kaminaljuyu, Guatemala">Kaminaljuyu, Guatemala</option>
+            <option value="San Lorenzo, Mexico">San Lorenzo, Mexico</option>
+            <option value="Palenque, Mexico">Palenque, Mexico</option>
+            <option value="Magdalena River, Colombia">Magdalena River, Colombia</option>
+            <option value="Isthmus of Darien, Panama">Isthmus of Darien, Panama</option>
+        </select>
+        <label for="distanceScale">Distance Scale (0.5x - 2x):</label>
+        <input type="range" id="distanceScale" min="0.5" max="2" step="0.1" value="1" onchange="updateMap()">
+        <span id="scaleValue">1x</span>
+    </div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="locations.js"></script>
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([40.0, -91.0], 5); // Default centered near Midwest US
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Base coordinates for Zarahemla (top 10 proposed locations by LDS scholars)
+        let zarahemlaCoords = { lat: 40.0700, lng: -91.5200 }; // Default: Montrose, IA
+        const zarahemlaLocations = {
+            "Montrose, IA": { lat: 40.0700, lng: -91.5200 },           // Heartland model, near Nauvoo
+            "Chillicothe, OH": { lat: 39.3331, lng: -82.9824 },       // Heartland model variant (Ohio)
+            "Nauvoo, IL (opposite)": { lat: 40.5500, lng: -91.3849 }, // D&C 125:3, across from Nauvoo
+            "Cahokia, IL": { lat: 38.5709, lng: -90.1901 },          // Heartland model, Mound Builders
+            "Buffalo, NY": { lat: 42.8864, lng: -78.8784 },          // Great Lakes model
+            "Kaminaljuyu, Guatemala": { lat: 14.6349, lng: -90.5353 }, // Mesoamerican model
+            "San Lorenzo, Mexico": { lat: 17.7667, lng: -94.7167 },  // Mesoamerican model, Olmec site
+            "Palenque, Mexico": { lat: 17.5095, lng: -92.0461 },     // Mesoamerican model, Maya site
+            "Magdalena River, Colombia": { lat: 9.2410, lng: -74.4267 }, // Hemispheric model
+            "Isthmus of Darien, Panama": { lat: 8.5833, lng: -78.1667 } // Early hemispheric view
+        };
+
+        // Store markers for updating
+        let markers = [];
+
+        // Function to update map based on Zarahemla location and distance scale
+        function updateMap() {
+            // Clear existing markers
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            // Get the distance scale from the slider
+            const scale = parseFloat(document.getElementById('distanceScale').value);
+            document.getElementById('scaleValue').textContent = `${scale}x`;
+
+            // Add markers for each location
+            Object.keys(locations).forEach(key => {
+                const loc = locations[key];
+                let lat, lng;
+
+                // Jerusalem-related Old World locations (fixed, not scaled)
+                if (key.includes("Jerusalem") || key === "Wilderness" || key === "Red Sea" || 
+                    key === "Valley of Lemuel" || key === "River Laman" || key === "Bountiful (Old World)" || 
+                    key === "Irreantum") {
+                    lat = 31.7683; // Jerusalem real-world latitude
+                    lng = 35.2137; // Jerusalem real-world longitude
+
+                    // Offset for proximity and direction (not scaled)
+                    if (key === "Land of Jerusalem") lng += 0.1;
+                    else if (key === "Wilderness") lat -= 0.5;
+                    else if (key === "Red Sea") lat -= 1.0, lng += 1.0;
+                    else if (key === "Valley of Lemuel") lat -= 0.3, lng += 0.2;
+                    else if (key === "River Laman") lat -= 0.35, lng += 0.25;
+                    else if (key === "Bountiful (Old World)") lat -= 1.5, lng += 1.5;
+                    else if (key === "Irreantum") lat -= 1.7, lng += 1.7;
+                } else {
+                    // New World locations relative to Zarahemla (scaled)
+                    lat = zarahemlaCoords.lat;
+                    lng = zarahemlaCoords.lng;
+
+                    if (loc.relationships && loc.relationships.direction) {
+                        const dir = loc.relationships.direction;
+                        if (dir["north of"] === "Land of Zarahemla") lat += 1.0 * scale;
+                        else if (dir["south of"] === "Land of Zarahemla") lat -= 1.0 * scale;
+                        else if (dir["east of"] === "Land of Zarahemla") lng += 1.0 * scale;
+                        else if (dir["west of"] === "Land of Zarahemla") lng -= 1.0 * scale;
+                        else if (dir["near"] === "Land of Zarahemla") lat += 0.1 * scale, lng += 0.1 * scale;
+
+                        // Specific adjustments based on relationships (scaled)
+                        if (key === "Land of Nephi") lat -= 1.5 * scale;
+                        else if (key === "Land of Bountiful (New World)") lat += 1.5 * scale;
+                        else if (key === "Narrow Neck of Land") lat += 2.0 * scale;
+                        else if (key === "Land of Desolation") lat += 2.5 * scale;
+                        else if (key === "East Sea") lng += 2.0 * scale;
+                        else if (key === "West Sea") lng -= 2.0 * scale;
+                        else if (key === "Land of Shilom") lat -= 1.4 * scale, lng += 0.1 * scale;
+                        else if (key === "Land of Shemlon") lat -= 1.3 * scale, lng += 0.2 * scale;
+                        else if (key === "Land of Melek") lng -= 1.2 * scale;
+                        else if (key === "Land of Ammonihah") lat += 0.5 * scale, lng += 0.5 * scale;
+                        else if (key === "Land of Noah") lat += 0.6 * scale, lng += 0.6 * scale;
+                        else if (key === "Land of Ishmael") lat -= 1.6 * scale, lng -= 0.1 * scale;
+                        else if (key === "Land of Middoni") lat -= 1.7 * scale, lng -= 0.2 * scale;
+                        else if (key === "Land of Jershon") lat += 0.3 * scale, lng += 1.5 * scale;
+                        else if (key === "Narrow Strip of Wilderness") lat -= 0.8 * scale;
+                        else if (key === "Land of Nephihah") lng += 1.8 * scale, lat += 0.2 * scale;
+                        else if (key === "Land of Moroni") lng += 1.9 * scale, lat += 0.1 * scale;
+                        else if (key === "Land of Lehi") lng += 1.7 * scale, lat += 0.3 * scale;
+                        else if (key === "Land of Morianton") lng += 1.6 * scale, lat += 0.4 * scale;
+                        else if (key === "Land of Manti") lat -= 0.5 * scale, lng += 0.3 * scale;
+                        else if (key === "Land of Antionum") lat += 0.4 * scale, lng += 1.4 * scale;
+                        else if (key === "Land of Antiparah") lat -= 0.6 * scale, lng += 0.4 * scale;
+                        else if (key === "Land of Cumeni") lat -= 0.7 * scale, lng += 0.5 * scale;
+                        else if (key === "Land of Judea") lat -= 0.8 * scale, lng += 0.6 * scale;
+                        else if (key === "City of Mulek") lat += 1.4 * scale, lng += 1.2 * scale;
+                        else if (key === "City of Gid") lat += 1.3 * scale, lng += 1.1 * scale;
+                        else if (key === "Land of Joshua") lng -= 1.5 * scale;
+                        else if (key === "Land of David") lng -= 1.4 * scale, lat -= 0.1 * scale;
+                        else if (key === "Hill Cumorah") lat += 3.0 * scale, lng += 0.5 * scale;
+                        else if (key === "Land of Cumorah") lat += 2.9 * scale, lng += 0.6 * scale;
+                        else if (key === "Land of Angola") lat -= 0.2 * scale, lng -= 0.5 * scale;
+                        else if (key === "Land of Sherrizah") lat += 2.8 * scale, lng += 0.7 * scale;
+                        else if (key === "Land of Moriantum") lat += 0.2 * scale, lng += 0.2 * scale;
+                    }
+                }
+
+                const marker = L.marker([lat, lng]).addTo(map)
+                    .bindPopup(`<b>${key}</b><br>${loc.description}`);
+                markers.push(marker);
+            });
+
+            // Center map on Zarahemla
+            map.setView([zarahemlaCoords.lat, zarahemlaCoords.lng], 5);
+        }
+
+        // Function to set Zarahemla location
+        function setZarahemla(location) {
+            zarahemlaCoords = zarahemlaLocations[location];
+            updateMap();
+        }
+
+        // Initial map load with Montrose as default
+        updateMap();
+    </script>
+</body>
+</html>
