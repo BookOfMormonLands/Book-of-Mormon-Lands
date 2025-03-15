@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book of Mormon Locations Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
     <style>
         #map { height: 600px; width: 100%; }
         body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }
@@ -12,22 +13,56 @@
         select, input[type="range"], input[type="number"] { padding: 5px; margin-right: 10px; }
         label { margin-right: 5px; }
         button { padding: 5px 10px; }
+        .custom-icon { font-size: 20px; text-align: center; text-shadow: 1px 1px 2px black; }
+        .leaflet-popup-content-wrapper { font-size: 14px; }
+        .leaflet-popup-content b { color: #333; }
+        .leaflet-popup-content ul { margin: 5px 0; padding-left: 20px; }
+        .leaflet-popup-content li { margin-bottom: 3px; }
     </style>
 </head>
 <body>
     <div class="controls">
         <label for="zarahemlaSelect">Select Zarahemla Location:</label>
         <select id="zarahemlaSelect" onchange="setZarahemlaFromSelect(this.value)">
-            <option value="Montrose, IA">Montrose, IA</option>
-            <option value="Chillicothe, OH">Chillicothe, OH</option>
-            <option value="Nauvoo, IL (opposite)">Nauvoo, IL (opposite)</option>
-            <option value="Cahokia, IL">Cahokia, IL</option>
+            <option value="Aguadas, Guatemala">Aguadas, Guatemala</option>
+            <option value="Alta Verapaz, Guatemala">Alta Verapaz, Guatemala</option>
+            <option value="Baja Verapaz, Guatemala">Baja Verapaz, Guatemala</option>
             <option value="Buffalo, NY">Buffalo, NY</option>
-            <option value="Kaminaljuyu, Guatemala">Kaminaljuyu, Guatemala</option>
-            <option value="San Lorenzo, Mexico">San Lorenzo, Mexico</option>
-            <option value="Palenque, Mexico">Palenque, Mexico</option>
-            <option value="Magdalena River, Colombia">Magdalena River, Colombia</option>
+            <option value="Cahokia, IL">Cahokia, IL</option>
+            <option value="Chillicothe, OH">Chillicothe, OH</option>
+            <option value="Chontalpa, Mexico">Chontalpa, Mexico</option>
+            <option value="Copan, Honduras">Copan, Honduras</option>
+            <option value="Des Moines River, IA">Des Moines River, IA</option>
+            <option value="Grijalva River, Mexico">Grijalva River, Mexico</option>
+            <option value="Guatemala City, Guatemala">Guatemala City, Guatemala</option>
+            <option value="Illinois River, IL">Illinois River, IL</option>
             <option value="Isthmus of Darien, Panama">Isthmus of Darien, Panama</option>
+            <option value="Isthmus of Tehuantepec, Mexico">Isthmus of Tehuantepec, Mexico</option>
+            <option value="Kaminaljuyu, Guatemala">Kaminaljuyu, Guatemala</option>
+            <option value="Kirtland, OH">Kirtland, OH</option>
+            <option value="La Venta, Mexico">La Venta, Mexico</option>
+            <option value="Magdalena River, Colombia">Magdalena River, Colombia</option>
+            <option value="Manti, UT">Manti, UT</option>
+            <option value="Mississippi River near St. Louis, MO">Mississippi River near St. Louis, MO</option>
+            <option value="Montrose, IA">Montrose, IA</option>
+            <option value="Nauvoo, IL (opposite)">Nauvoo, IL (opposite)</option>
+            <option value="Niagara Falls, NY">Niagara Falls, NY</option>
+            <option value="Palenque, Mexico">Palenque, Mexico</option>
+            <option value="Peten, Guatemala">Peten, Guatemala</option>
+            <option value="Quetzaltenango, Guatemala">Quetzaltenango, Guatemala</option>
+            <option value="San Lorenzo, Mexico">San Lorenzo, Mexico</option>
+            <option value="Santa Rosa, Guatemala">Santa Rosa, Guatemala</option>
+            <option value="Sidon River Hypothesis (Usumacinta), Mexico">Sidon River Hypothesis (Usumacinta), Mexico</option>
+            <option value="Soto la Marina, Mexico">Soto la Marina, Mexico</option>
+            <option value="Tabasco, Mexico">Tabasco, Mexico</option>
+            <option value="Tennessee River, TN">Tennessee River, TN</option>
+            <option value="Tikal, Guatemala">Tikal, Guatemala</option>
+            <option value="Tres Zapotes, Mexico">Tres Zapotes, Mexico</option>
+            <option value="Tuxtla Gutierrez, Mexico">Tuxtla Gutierrez, Mexico</option>
+            <option value="Usumacinta River, Mexico">Usumacinta River, Mexico</option>
+            <option value="Uxmal, Mexico">Uxmal, Mexico</option>
+            <option value="Veracruz, Mexico">Veracruz, Mexico</option>
+            <option value="Zarahemla, IA (hypothetical)">Zarahemla, IA (hypothetical)</option>
             <option value="custom">Custom Location</option>
         </select>
 
@@ -52,127 +87,183 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="locations.js"></script>
     <script>
-        // Initialize the map
-        const map = L.map('map').setView([40.0, -91.0], 5); // Default centered near Midwest US
+        const map = L.map('map').setView([40.0, -91.0], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        // Base coordinates for Zarahemla (top 10 proposed locations by LDS scholars + custom)
         let zarahemlaCoords = { lat: 40.0700, lng: -91.5200 }; // Default: Montrose, IA
-        const jerusalemCoords = { lat: 31.7683, lng: 35.2137 }; // Fixed Jerusalem coordinates
+        const jerusalemCoords = { lat: 31.7683, lng: 35.2137 };
         const zarahemlaLocations = {
-            "Montrose, IA": { lat: 40.0700, lng: -91.5200 },           // Heartland model, near Nauvoo
-            "Chillicothe, OH": { lat: 39.3331, lng: -82.9824 },       // Heartland model variant (Ohio)
-            "Nauvoo, IL (opposite)": { lat: 40.5500, lng: -91.3849 }, // D&C 125:3, across from Nauvoo
-            "Cahokia, IL": { lat: 38.5709, lng: -90.1901 },          // Heartland model, Mound Builders
-            "Buffalo, NY": { lat: 42.8864, lng: -78.8784 },          // Great Lakes model
-            "Kaminaljuyu, Guatemala": { lat: 14.6349, lng: -90.5353 }, // Mesoamerican model
-            "San Lorenzo, Mexico": { lat: 17.7667, lng: -94.7167 },  // Mesoamerican model, Olmec site
-            "Palenque, Mexico": { lat: 17.5095, lng: -92.0461 },     // Mesoamerican model, Maya site
-            "Magdalena River, Colombia": { lat: 9.2410, lng: -74.4267 }, // Hemispheric model
-            "Isthmus of Darien, Panama": { lat: 8.5833, lng: -78.1667 } // Early hemispheric view
+            "Aguadas, Guatemala": { lat: 14.9333, lng: -90.3167 },
+            "Alta Verapaz, Guatemala": { lat: 15.5833, lng: -90.1667 },
+            "Baja Verapaz, Guatemala": { lat: 15.0833, lng: -90.4167 },
+            "Buffalo, NY": { lat: 42.8864, lng: -78.8784 },
+            "Cahokia, IL": { lat: 38.5709, lng: -90.1901 },
+            "Chillicothe, OH": { lat: 39.3331, lng: -82.9824 },
+            "Chontalpa, Mexico": { lat: 17.9167, lng: -93.3167 },
+            "Copan, Honduras": { lat: 14.8333, lng: -89.15 },
+            "Des Moines River, IA": { lat: 40.9167, lng: -91.4167 },
+            "Grijalva River, Mexico": { lat: 17.6667, lng: -93.0167 },
+            "Guatemala City, Guatemala": { lat: 14.6349, lng: -90.5069 },
+            "Illinois River, IL": { lat: 40.5667, lng: -90.6833 },
+            "Isthmus of Darien, Panama": { lat: 8.5833, lng: -78.1667 },
+            "Isthmus of Tehuantepec, Mexico": { lat: 16.3333, lng: -94.4167 },
+            "Kaminaljuyu, Guatemala": { lat: 14.6349, lng: -90.5353 },
+            "Kirtland, OH": { lat: 41.6289, lng: -81.3615 },
+            "La Venta, Mexico": { lat: 18.1, lng: -94.0333 },
+            "Magdalena River, Colombia": { lat: 9.2410, lng: -74.4267 },
+            "Manti, UT": { lat: 39.2680, lng: -111.6387 },
+            "Mississippi River near St. Louis, MO": { lat: 38.6270, lng: -90.1994 },
+            "Montrose, IA": { lat: 40.0700, lng: -91.5200 },
+            "Nauvoo, IL (opposite)": { lat: 40.5500, lng: -91.3849 },
+            "Niagara Falls, NY": { lat: 43.0962, lng: -79.0377 },
+            "Palenque, Mexico": { lat: 17.5095, lng: -92.0461 },
+            "Peten, Guatemala": { lat: 16.9120, lng: -89.8910 },
+            "Quetzaltenango, Guatemala": { lat: 14.8360, lng: -91.5210 },
+            "San Lorenzo, Mexico": { lat: 17.7667, lng: -94.7167 },
+            "Santa Rosa, Guatemala": { lat: 14.2833, lng: -90.2833 },
+            "Sidon River Hypothesis (Usumacinta), Mexico": { lat: 17.2333, lng: -91.4167 },
+            "Soto la Marina, Mexico": { lat: 23.7667, lng: -98.2167 },
+            "Tabasco, Mexico": { lat: 17.9667, lng: -92.9167 },
+            "Tennessee River, TN": { lat: 35.1667, lng: -85.25 },
+            "Tikal, Guatemala": { lat: 17.2221, lng: -89.6231 },
+            "Tres Zapotes, Mexico": { lat: 18.4667, lng: -95.4333 },
+            "Tuxtla Gutierrez, Mexico": { lat: 16.7597, lng: -93.1131 },
+            "Usumacinta River, Mexico": { lat: 16.9167, lng: -91.0 },
+            "Uxmal, Mexico": { lat: 20.4167, lng: -89.7667 },
+            "Veracruz, Mexico": { lat: 19.1738, lng: -96.1342 },
+            "Zarahemla, IA (hypothetical)": { lat: 40.0167, lng: -91.5065 }
         };
 
-        // Store markers for updating
+        const iconStyles = {
+            city: { class: 'fas fa-city', color: '#555555' },
+            land: { class: 'fas fa-map', color: '#8B4513' },
+            river: { class: 'fas fa-water', color: '#1E90FF' },
+            sea: { class: 'fas fa-ship', color: '#4682B4' },
+            hill: { class: 'fas fa-mountain', color: '#228B22' },
+            valley: { class: 'fas fa-caret-down', color: '#32CD32' },
+            tower: { class: 'fas fa-building', color: '#696969' },
+            'geographical feature': { class: 'fas fa-globe', color: '#808080' },
+            'body of water': { class: 'fas fa-tint', color: '#00B7EB' }
+        };
+
         let markers = [];
 
-        // Function to update map based on Zarahemla location and distance scales
         function updateMap(focus = 'zarahemla') {
-            // Clear existing markers
             markers.forEach(marker => map.removeLayer(marker));
             markers = [];
 
-            // Get the distance scales from the sliders
             const zarahemlaScale = parseFloat(document.getElementById('zarahemlaScale').value);
             document.getElementById('zarahemlaScaleValue').textContent = `${zarahemlaScale}x`;
             const jerusalemScale = parseFloat(document.getElementById('jerusalemScale').value);
             document.getElementById('jerusalemScaleValue').textContent = `${jerusalemScale}x`;
 
-            // Add markers for each location
             Object.keys(locations).forEach(key => {
                 const loc = locations[key];
-                let lat, lng;
+                let lat = (key.includes("Jerusalem") || key === "Wilderness" || key === "Red Sea" || 
+                           key === "Valley of Lemuel" || key === "River Laman" || key === "Bountiful (Old World)" || 
+                           key === "Irreantum") ? jerusalemCoords.lat : zarahemlaCoords.lat;
+                let lng = (key.includes("Jerusalem") || key === "Wilderness" || key === "Red Sea" || 
+                           key === "Valley of Lemuel" || key === "River Laman" || key === "Bountiful (Old World)" || 
+                           key === "Irreantum") ? jerusalemCoords.lng : zarahemlaCoords.lng;
 
-                // Jerusalem-related Old World locations (scaled by jerusalemScale)
-                if (key.includes("Jerusalem") || key === "Wilderness" || key === "Red Sea" || 
-                    key === "Valley of Lemuel" || key === "River Laman" || key === "Bountiful (Old World)" || 
-                    key === "Irreantum") {
-                    lat = jerusalemCoords.lat;
-                    lng = jerusalemCoords.lng;
+                // Old World locations
+                if (key === "Land of Jerusalem") lat += 0.05 * jerusalemScale, lng += 0.05 * jerusalemScale;
+                else if (key === "Wilderness") lat -= 0.7 * jerusalemScale;
+                else if (key === "Red Sea") lat -= 1.2 * jerusalemScale, lng += 0.5 * jerusalemScale;
+                else if (key === "Valley of Lemuel") lat -= 1.0 * jerusalemScale, lng += 0.3 * jerusalemScale;
+                else if (key === "River Laman") lat -= 1.05 * jerusalemScale, lng += 0.35 * jerusalemScale;
+                else if (key === "Bountiful (Old World)") lat -= 1.8 * jerusalemScale, lng += 1.2 * jerusalemScale;
+                else if (key === "Irreantum") lat -= 2.0 * jerusalemScale, lng += 1.3 * jerusalemScale;
+                // New World locations
+                else if (key === "Land of Nephi") lat -= 1.5 * zarahemlaScale;
+                else if (key === "Land of Bountiful (New World)") lat += 1.5 * zarahemlaScale;
+                else if (key === "Narrow Neck of Land") lat += 2.5 * zarahemlaScale;
+                else if (key === "Land of Desolation") lat += 3.0 * zarahemlaScale;
+                else if (key === "East Sea") lng += 2.0 * zarahemlaScale;
+                else if (key === "West Sea") lng -= 2.0 * zarahemlaScale;
+                else if (key === "Land of Shilom") lat -= 1.4 * zarahemlaScale, lng += 0.1 * zarahemlaScale;
+                else if (key === "Land of Shemlon") lat -= 1.3 * zarahemlaScale, lng += 0.2 * zarahemlaScale;
+                else if (key === "Land of Melek") lng -= 1.2 * zarahemlaScale;
+                else if (key === "Land of Ammonihah") lat += 0.5 * zarahemlaScale, lng += 0.5 * zarahemlaScale;
+                else if (key === "Land of Noah") lat += 0.6 * zarahemlaScale, lng += 0.6 * zarahemlaScale;
+                else if (key === "Land of Ishmael") lat -= 1.6 * zarahemlaScale, lng -= 0.1 * zarahemlaScale;
+                else if (key === "Land of Middoni") lat -= 1.7 * zarahemlaScale, lng -= 0.2 * zarahemlaScale;
+                else if (key === "Land of Jershon") lat += 0.3 * zarahemlaScale, lng += 1.5 * zarahemlaScale;
+                else if (key === "Narrow Strip of Wilderness") lat -= 0.8 * zarahemlaScale;
+                else if (key === "Land of Nephihah") lng += 1.8 * zarahemlaScale, lat += 0.2 * zarahemlaScale;
+                else if (key === "Land of Moroni") lng += 1.9 * zarahemlaScale, lat += 0.1 * zarahemlaScale;
+                else if (key === "Land of Lehi") lng += 1.7 * zarahemlaScale, lat += 0.3 * zarahemlaScale;
+                else if (key === "Land of Morianton") lng += 1.6 * zarahemlaScale, lat += 0.4 * zarahemlaScale;
+                else if (key === "Land of Manti") lat -= 0.7 * zarahemlaScale, lng += 0.6 * zarahemlaScale;
+                else if (key === "Land of Antionum") lat += 0.4 * zarahemlaScale, lng += 1.4 * zarahemlaScale;
+                else if (key === "Land of Antiparah") lat -= 0.6 * zarahemlaScale, lng += 0.4 * zarahemlaScale;
+                else if (key === "Land of Cumeni") lat -= 0.7 * zarahemlaScale, lng += 0.5 * zarahemlaScale;
+                else if (key === "Land of Judea") lat -= 0.8 * zarahemlaScale, lng += 0.6 * zarahemlaScale;
+                else if (key === "City of Mulek") lat += 1.4 * zarahemlaScale, lng += 1.2 * zarahemlaScale;
+                else if (key === "City of Gid") lat += 1.3 * zarahemlaScale, lng += 1.1 * zarahemlaScale;
+                else if (key === "Land of Joshua") lng -= 1.5 * zarahemlaScale;
+                else if (key === "Land of David") lng -= 1.4 * zarahemlaScale, lat -= 0.1 * zarahemlaScale;
+                else if (key === "Hill Cumorah") lat += 3.0 * zarahemlaScale, lng += 0.5 * zarahemlaScale;
+                else if (key === "Land of Cumorah") lat += 2.9 * zarahemlaScale, lng += 0.6 * zarahemlaScale;
+                else if (key === "Waters of Sebus") lat -= 1.6 * zarahemlaScale, lng -= 0.2 * zarahemlaScale;
+                else if (key === "Hill Shim") lat += 0.1 * zarahemlaScale, lng += 0.2 * zarahemlaScale;
+                else if (key === "Land of Antum") lat += 0.2 * zarahemlaScale, lng += 0.3 * zarahemlaScale;
+                else if (key === "Land of Angola") lat -= 0.3 * zarahemlaScale, lng -= 0.6 * zarahemlaScale;
+                else if (key === "Land of Sherrizah") lat += 2.7 * zarahemlaScale, lng += 0.8 * zarahemlaScale;
+                else if (key === "Land of Moriantum") lat += 0.3 * zarahemlaScale, lng += 0.3 * zarahemlaScale;
+                else if (key === "Tower of Sherrizah") lat += 2.7 * zarahemlaScale, lng += 0.9 * zarahemlaScale;
+                else if (key === "Waters of Ripliancum") lat += 3.2 * zarahemlaScale, lng += 0.7 * zarahemlaScale;
+                else if (key === "Land of Ogath") lat += 3.1 * zarahemlaScale, lng += 0.6 * zarahemlaScale;
+                else if (key === "Hill Ramah") lat += 3.0 * zarahemlaScale, lng += 0.5 * zarahemlaScale;
+                else if (key === "Valley of Corihor") lat += 2.8 * zarahemlaScale, lng += 0.4 * zarahemlaScale;
+                else if (key === "Valley of Shurr") lat += 2.9 * zarahemlaScale, lng += 0.3 * zarahemlaScale;
+                else if (key === "Hill Comnor") lat += 2.9 * zarahemlaScale, lng += 0.2 * zarahemlaScale;
+                else if (key === "Land of Corihor") lat += 2.7 * zarahemlaScale, lng += 0.1 * zarahemlaScale;
+                else if (key === "Land of Nehor") lat += 2.6 * zarahemlaScale, lng += 0.0 * zarahemlaScale;
+                else if (key === "Land of Heth") lat += 2.5 * zarahemlaScale, lng -= 0.1 * zarahemlaScale;
+                else if (key === "Land of Moron") lat += 2.4 * zarahemlaScale, lng -= 0.2 * zarahemlaScale;
+                else if (key === "Land of Ablom") lat += 2.3 * zarahemlaScale, lng += 1.8 * zarahemlaScale;
+                else if (key === "Land of Akish") lat += 2.2 * zarahemlaScale, lng -= 0.3 * zarahemlaScale;
+                else if (key === "Hill Manti") lat -= 0.1 * zarahemlaScale, lng += 0.1 * zarahemlaScale;
+                else if (key === "Hill Amnihu") lat -= 0.2 * zarahemlaScale, lng += 0.4 * zarahemlaScale;
+                else if (key === "Hill Riplah") lat -= 0.6 * zarahemlaScale, lng += 0.3 * zarahemlaScale;
+                else if (key === "Waters of Mormon") lat -= 1.7 * zarahemlaScale, lng += 0.1 * zarahemlaScale;
+                else if (key === "Forest of Mormon") lat -= 1.65 * zarahemlaScale, lng += 0.15 * zarahemlaScale;
+                else if (key === "Valley of Alma") lat -= 1.2 * zarahemlaScale, lng -= 0.3 * zarahemlaScale;
+                else if (key === "Land of Helam") lat -= 1.1 * zarahemlaScale, lng -= 0.4 * zarahemlaScale;
+                else if (key === "River Sidon") lng += 0.5 * zarahemlaScale;
+                else if (key === "Valley of Gideon") lat += 0.2 * zarahemlaScale, lng += 0.6 * zarahemlaScale;
+                else if (key === "Land of Gideon") lat += 0.3 * zarahemlaScale, lng += 0.7 * zarahemlaScale;
 
-                    // Offset for proximity and direction (scaled)
-                    if (key === "Land of Jerusalem") lng += 0.1 * jerusalemScale;
-                    else if (key === "Wilderness") lat -= 0.5 * jerusalemScale;
-                    else if (key === "Red Sea") lat -= 1.0 * jerusalemScale, lng += 1.0 * jerusalemScale;
-                    else if (key === "Valley of Lemuel") lat -= 0.3 * jerusalemScale, lng += 0.2 * jerusalemScale;
-                    else if (key === "River Laman") lat -= 0.35 * jerusalemScale, lng += 0.25 * jerusalemScale;
-                    else if (key === "Bountiful (Old World)") lat -= 1.5 * jerusalemScale, lng += 1.5 * jerusalemScale;
-                    else if (key === "Irreantum") lat -= 1.7 * jerusalemScale, lng += 1.7 * jerusalemScale;
-                } else {
-                    // New World locations relative to Zarahemla (scaled by zarahemlaScale)
-                    lat = zarahemlaCoords.lat;
-                    lng = zarahemlaCoords.lng;
+                const style = iconStyles[loc.type] || iconStyles.land;
+                const markerIcon = L.divIcon({
+                    className: 'custom-icon',
+                    html: `<i class="${style.class}" style="color: ${style.color};"></i>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
 
-                    if (loc.relationships && loc.relationships.direction) {
-                        const dir = loc.relationships.direction;
-                        if (dir["north of"] === "Land of Zarahemla") lat += 1.0 * zarahemlaScale;
-                        else if (dir["south of"] === "Land of Zarahemla") lat -= 1.0 * zarahemlaScale;
-                        else if (dir["east of"] === "Land of Zarahemla") lng += 1.0 * zarahemlaScale;
-                        else if (dir["west of"] === "Land of Zarahemla") lng -= 1.0 * zarahemlaScale;
-                        else if (dir["near"] === "Land of Zarahemla") lat += 0.1 * zarahemlaScale, lng += 0.1 * zarahemlaScale;
+                const popupContent = `
+                    <b>${key}</b><br>
+                    ${loc.description}<br>
+                    ${loc.events && loc.events.length ? '<b>Events:</b><ul>' + loc.events.map(e => `<li>${e}</li>`).join('') + '</ul>' : ''}
+                    ${loc.journeys && loc.journeys.length ? '<b>Journeys:</b><ul>' + loc.journeys.map(j => `<li>${j}</li>`).join('') + '</ul>' : ''}
+                    ${loc.narrativeLinks && loc.narrativeLinks.length ? '<b>Narrative Links:</b> ' + loc.narrativeLinks.join(', ') : ''}
+                    ${loc.relationships.proximity.length ? '<b>Proximity:</b> ' + loc.relationships.proximity.join(', ') : ''}
+                    ${Object.keys(loc.relationships.direction).length ? '<b>Direction:</b><ul>' + 
+                        Object.entries(loc.relationships.direction).map(([dir, place]) => `<li>${dir}: ${place}</li>`).join('') + '</ul>' : ''}
+                `;
 
-                        // Specific adjustments based on relationships (scaled)
-                        if (key === "Land of Nephi") lat -= 1.5 * zarahemlaScale;
-                        else if (key === "Land of Bountiful (New World)") lat += 1.5 * zarahemlaScale;
-                        else if (key === "Narrow Neck of Land") lat += 2.0 * zarahemlaScale;
-                        else if (key === "Land of Desolation") lat += 2.5 * zarahemlaScale;
-                        else if (key === "East Sea") lng += 2.0 * zarahemlaScale;
-                        else if (key === "West Sea") lng -= 2.0 * zarahemlaScale;
-                        else if (key === "Land of Shilom") lat -= 1.4 * zarahemlaScale, lng += 0.1 * zarahemlaScale;
-                        else if (key === "Land of Shemlon") lat -= 1.3 * zarahemlaScale, lng += 0.2 * zarahemlaScale;
-                        else if (key === "Land of Melek") lng -= 1.2 * zarahemlaScale;
-                        else if (key === "Land of Ammonihah") lat += 0.5 * zarahemlaScale, lng += 0.5 * zarahemlaScale;
-                        else if (key === "Land of Noah") lat += 0.6 * zarahemlaScale, lng += 0.6 * zarahemlaScale;
-                        else if (key === "Land of Ishmael") lat -= 1.6 * zarahemlaScale, lng -= 0.1 * zarahemlaScale;
-                        else if (key === "Land of Middoni") lat -= 1.7 * zarahemlaScale, lng -= 0.2 * zarahemlaScale;
-                        else if (key === "Land of Jershon") lat += 0.3 * zarahemlaScale, lng += 1.5 * zarahemlaScale;
-                        else if (key === "Narrow Strip of Wilderness") lat -= 0.8 * zarahemlaScale;
-                        else if (key === "Land of Nephihah") lng += 1.8 * zarahemlaScale, lat += 0.2 * zarahemlaScale;
-                        else if (key === "Land of Moroni") lng += 1.9 * zarahemlaScale, lat += 0.1 * zarahemlaScale;
-                        else if (key === "Land of Lehi") lng += 1.7 * zarahemlaScale, lat += 0.3 * zarahemlaScale;
-                        else if (key === "Land of Morianton") lng += 1.6 * zarahemlaScale, lat += 0.4 * zarahemlaScale;
-                        else if (key === "Land of Manti") lat -= 0.5 * zarahemlaScale, lng += 0.3 * zarahemlaScale;
-                        else if (key === "Land of Antionum") lat += 0.4 * zarahemlaScale, lng += 1.4 * zarahemlaScale;
-                        else if (key === "Land of Antiparah") lat -= 0.6 * zarahemlaScale, lng += 0.4 * zarahemlaScale;
-                        else if (key === "Land of Cumeni") lat -= 0.7 * zarahemlaScale, lng += 0.5 * zarahemlaScale;
-                        else if (key === "Land of Judea") lat -= 0.8 * zarahemlaScale, lng += 0.6 * zarahemlaScale;
-                        else if (key === "City of Mulek") lat += 1.4 * zarahemlaScale, lng += 1.2 * zarahemlaScale;
-                        else if (key === "City of Gid") lat += 1.3 * zarahemlaScale, lng += 1.1 * zarahemlaScale;
-                        else if (key === "Land of Joshua") lng -= 1.5 * zarahemlaScale;
-                        else if (key === "Land of David") lng -= 1.4 * zarahemlaScale, lat -= 0.1 * zarahemlaScale;
-                        else if (key === "Hill Cumorah") lat += 3.0 * zarahemlaScale, lng += 0.5 * zarahemlaScale;
-                        else if (key === "Land of Cumorah") lat += 2.9 * zarahemlaScale, lng += 0.6 * zarahemlaScale;
-                        else if (key === "Land of Angola") lat -= 0.2 * zarahemlaScale, lng -= 0.5 * zarahemlaScale;
-                        else if (key === "Land of Sherrizah") lat += 2.8 * zarahemlaScale, lng += 0.7 * zarahemlaScale;
-                        else if (key === "Land of Moriantum") lat += 0.2 * zarahemlaScale, lng += 0.2 * zarahemlaScale;
-                    }
-                }
-
-                const marker = L.marker([lat, lng]).addTo(map)
-                    .bindPopup(`<b>${key}</b><br>${loc.description}`);
+                const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map)
+                    .bindPopup(popupContent);
                 markers.push(marker);
             });
 
-            // Center map based on focus parameter
-            if (focus === 'jerusalem') {
-                map.setView([jerusalemCoords.lat, jerusalemCoords.lng], 5);
-            } else {
-                map.setView([zarahemlaCoords.lat, zarahemlaCoords.lng], 5);
-            }
+            map.setView(focus === 'jerusalem' ? [jerusalemCoords.lat, jerusalemCoords.lng] : [zarahemlaCoords.lat, zarahemlaCoords.lng], 5);
         }
 
-        // Function to set Zarahemla from dropdown selection
         function setZarahemlaFromSelect(location) {
             if (location === "custom") {
                 document.getElementById("customCoords").style.display = "inline";
@@ -183,7 +274,6 @@
             }
         }
 
-        // Function to set Zarahemla from custom coordinates
         function setZarahemlaCustom() {
             const lat = parseFloat(document.getElementById("customLat").value);
             const lng = parseFloat(document.getElementById("customLng").value);
@@ -197,7 +287,6 @@
             updateMap('zarahemla');
         }
 
-        // Initial map load with Montrose as default
         updateMap('zarahemla');
     </script>
 </body>
