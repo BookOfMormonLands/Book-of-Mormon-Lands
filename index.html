@@ -2,122 +2,253 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Book of Mormon Locations Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
     <style>
-        #map { height: 600px; width: 100%; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }
-        .controls { margin-bottom: 10px; }
-        select, input[type="range"], input[type="number"] { padding: 5px; margin-right: 10px; }
-        label { margin-right: 5px; }
-        button { padding: 5px 10px; }
-        .custom-icon { font-size: 20px; text-align: center; text-shadow: 1px 1px 2px black; }
-        .leaflet-popup-content-wrapper { font-size: 14px; }
-        .leaflet-popup-content b { color: #333; }
-        .leaflet-popup-content ul { margin: 5px 0; padding-left: 20px; }
-        .leaflet-popup-content li { margin-bottom: 3px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            overflow-x: hidden;
+        }
+        #map {
+            height: calc(100vh - 60px); /* Adjust for top bar height */
+            width: 100%;
+        }
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001;
+            height: 60px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        input[type="text"], input[type="number"], input[type="range"] {
+            padding: 6px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            background: #ecf0f1;
+            color: #333;
+        }
+        input[type="range"] {
+            width: 100px;
+        }
+        button {
+            padding: 6px 12px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #c0392b;
+        }
+        .custom-icon {
+            font-size: 20px;
+            text-align: center;
+            text-shadow: 1px 1px 2px black;
+        }
+        .leaflet-popup-content-wrapper {
+            font-size: 14px;
+        }
+        .leaflet-popup-content b {
+            color: #333;
+        }
+        .leaflet-popup-content ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        .leaflet-popup-content li {
+            margin-bottom: 3px;
+        }
+        #search-container {
+            position: relative;
+            width: 300px;
+        }
+        #zarahemlaSearch {
+            width: 100%;
+        }
+        #search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            color: black;
+            max-height: 200px;
+            overflow-y: auto;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1002;
+        }
+        .search-result {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        .search-result:hover {
+            background-color: #f0f0f0;
+        }
+        #advanced-options {
+            display: flex;
+            gap: 20px;
+        }
+        #mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            #map {
+                height: calc(100vh - 50px); /* Adjust for mobile top bar */
+            }
+            .controls {
+                height: 50px;
+                padding: 10px;
+                flex-direction: row;
+                justify-content: space-between;
+                gap: 10px;
+            }
+            .control-group {
+                width: 100%;
+            }
+            #search-container {
+                width: 80%;
+            }
+            #advanced-options {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 50px;
+                left: 0;
+                right: 0;
+                background: #34495e;
+                padding: 15px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+                z-index: 1000;
+            }
+            #advanced-options.active {
+                display: flex;
+            }
+            #customCoords {
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+            }
+            .control-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            input[type="text"], input[type="number"], input[type="range"] {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            button {
+                width: 100%;
+            }
+            #mobile-toggle {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="controls">
-        <label for="zarahemlaSelect">Select Zarahemla Location:</label>
-        <select id="zarahemlaSelect" onchange="setZarahemlaFromSelect(this.value)">
-            <option value="Aguadas, Guatemala">Aguadas, Guatemala</option>
-            <option value="Alta Verapaz, Guatemala">Alta Verapaz, Guatemala</option>
-            <option value="Baja Verapaz, Guatemala">Baja Verapaz, Guatemala</option>
-            <option value="Buffalo, NY">Buffalo, NY</option>
-            <option value="Cahokia, IL">Cahokia, IL</option>
-            <option value="Chillicothe, OH">Chillicothe, OH</option>
-            <option value="Chontalpa, Mexico">Chontalpa, Mexico</option>
-            <option value="Copan, Honduras">Copan, Honduras</option>
-            <option value="Des Moines River, IA">Des Moines River, IA</option>
-            <option value="Grijalva River, Mexico">Grijalva River, Mexico</option>
-            <option value="Guatemala City, Guatemala">Guatemala City, Guatemala</option>
-            <option value="Illinois River, IL">Illinois River, IL</option>
-            <option value="Isthmus of Darien, Panama">Isthmus of Darien, Panama</option>
-            <option value="Isthmus of Tehuantepec, Mexico">Isthmus of Tehuantepec, Mexico</option>
-            <option value="Kaminaljuyu, Guatemala">Kaminaljuyu, Guatemala</option>
-            <option value="Kirtland, OH">Kirtland, OH</option>
-            <option value="La Venta, Mexico">La Venta, Mexico</option>
-            <option value="Magdalena River, Colombia">Magdalena River, Colombia</option>
-            <option value="Manti, UT">Manti, UT</option>
-            <option value="Mississippi River near St. Louis, MO">Mississippi River near St. Louis, MO</option>
-            <option value="Montrose, IA">Montrose, IA</option>
-            <option value="Nauvoo, IL (opposite)">Nauvoo, IL (opposite)</option>
-            <option value="Niagara Falls, NY">Niagara Falls, NY</option>
-            <option value="Palenque, Mexico">Palenque, Mexico</option>
-            <option value="Peten, Guatemala">Peten, Guatemala</option>
-            <option value="Quetzaltenango, Guatemala">Quetzaltenango, Guatemala</option>
-            <option value="San Lorenzo, Mexico">San Lorenzo, Mexico</option>
-            <option value="Santa Rosa, Guatemala">Santa Rosa, Guatemala</option>
-            <option value="Sidon River Hypothesis (Usumacinta), Mexico">Sidon River Hypothesis (Usumacinta), Mexico</option>
-            <option value="Soto la Marina, Mexico">Soto la Marina, Mexico</option>
-            <option value="Tabasco, Mexico">Tabasco, Mexico</option>
-            <option value="Tennessee River, TN">Tennessee River, TN</option>
-            <option value="Tikal, Guatemala">Tikal, Guatemala</option>
-            <option value="Tres Zapotes, Mexico">Tres Zapotes, Mexico</option>
-            <option value="Tuxtla Gutierrez, Mexico">Tuxtla Gutierrez, Mexico</option>
-            <option value="Usumacinta River, Mexico">Usumacinta River, Mexico</option>
-            <option value="Uxmal, Mexico">Uxmal, Mexico</option>
-            <option value="Veracruz, Mexico">Veracruz, Mexico</option>
-            <option value="Zarahemla, IA (hypothetical)">Zarahemla, IA (hypothetical)</option>
-            <option value="custom">Custom Location</option>
-        </select>
-
-        <div id="customCoords" style="display: none;">
-            <label for="customLat">Latitude:</label>
-            <input type="number" id="customLat" step="0.0001" min="-90" max="90" value="40.0700">
-            <label for="customLng">Longitude:</label>
-            <input type="number" id="customLng" step="0.0001" min="-180" max="180" value="-91.5200">
-            <button onclick="setZarahemlaCustom()">Set Custom Location</button>
+        <div class="control-group">
+            <label for="zarahemlaSearch">Search Zarahemla:</label>
+            <div id="search-container">
+                <input type="text" id="zarahemlaSearch" placeholder="Type to search..." autocomplete="off">
+                <div id="search-results"></div>
+            </div>
         </div>
-
-        <label for="zarahemlaScale">Zarahemla Distance Scale (0.5x - 10x):</label>
-        <input type="range" id="zarahemlaScale" min="0.5" max="10" step="0.1" value="1" onchange="updateMap('zarahemla')">
-        <span id="zarahemlaScaleValue">1x</span>
-
-        <label for="jerusalemScale">Jerusalem Distance Scale (0.5x - 10x):</label>
-        <input type="range" id="jerusalemScale" min="0.5" max="10" step="0.1" value="1" onchange="updateMap('jerusalem')">
-        <span id="jerusalemScaleValue">1x</span>
+        <div id="advanced-options">
+            <div id="customCoords" class="control-group">
+                <label for="customLat">Lat:</label>
+                <input type="number" id="customLat" step="0.0001" min="-90" max="90" value="42.8864">
+                <label for="customLng">Lng:</label>
+                <input type="number" id="customLng" step="0.0001" min="-180" max="180" value="-78.8784">
+                <button onclick="setZarahemlaCustom()">Set Custom</button>
+            </div>
+            <div class="control-group">
+                <label for="zarahemlaScale">Distance Scale:</label>
+                <input type="range" id="zarahemlaScale" min="0.5" max="10" step="0.1" value="1" onchange="updateMap('zarahemla')">
+                <span id="zarahemlaScaleValue">1x</span>
+            </div>
+            <div class="control-group">
+                <label for="jerusalemScale">Jerusalem Scale:</label>
+                <input type="range" id="jerusalemScale" min="0.5" max="10" step="0.1" value="1" onchange="updateMap('jerusalem')">
+                <span id="jerusalemScaleValue">1x</span>
+            </div>
+        </div>
+        <button id="mobile-toggle" onclick="toggleAdvancedOptions()"><i class="fas fa-chevron-down"></i></button>
     </div>
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="locations.js"></script>
     <script>
-        const map = L.map('map').setView([40.0, -91.0], 5);
+        const map = L.map('map').setView([42.8864, -78.8784], 5); // Default to Buffalo, NY
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        let zarahemlaCoords = { lat: 40.0700, lng: -91.5200 }; // Default: Montrose, IA
+        let zarahemlaCoords = { lat: 42.8864, lng: -78.8784 }; // Default: Buffalo, NY
         const jerusalemCoords = { lat: 31.7683, lng: 35.2137 };
         const zarahemlaLocations = {
             "Aguadas, Guatemala": { lat: 14.9333, lng: -90.3167 },
             "Alta Verapaz, Guatemala": { lat: 15.5833, lng: -90.1667 },
             "Baja Verapaz, Guatemala": { lat: 15.0833, lng: -90.4167 },
-            "Buffalo, NY": { lat: 42.8864, lng: -78.8784 },
-            "Cahokia, IL": { lat: 38.5709, lng: -90.1901 },
-            "Chillicothe, OH": { lat: 39.3331, lng: -82.9824 },
+            "Buffalo, NY, USA": { lat: 42.8864, lng: -78.8784 },
+            "Cahokia, IL, USA": { lat: 38.5709, lng: -90.1901 },
+            "Chillicothe, OH, USA": { lat: 39.3331, lng: -82.9824 },
             "Chontalpa, Mexico": { lat: 17.9167, lng: -93.3167 },
             "Copan, Honduras": { lat: 14.8333, lng: -89.15 },
-            "Des Moines River, IA": { lat: 40.9167, lng: -91.4167 },
+            "Des Moines River, IA, USA": { lat: 40.9167, lng: -91.4167 },
             "Grijalva River, Mexico": { lat: 17.6667, lng: -93.0167 },
             "Guatemala City, Guatemala": { lat: 14.6349, lng: -90.5069 },
-            "Illinois River, IL": { lat: 40.5667, lng: -90.6833 },
+            "Illinois River, IL, USA": { lat: 40.5667, lng: -90.6833 },
             "Isthmus of Darien, Panama": { lat: 8.5833, lng: -78.1667 },
             "Isthmus of Tehuantepec, Mexico": { lat: 16.3333, lng: -94.4167 },
             "Kaminaljuyu, Guatemala": { lat: 14.6349, lng: -90.5353 },
-            "Kirtland, OH": { lat: 41.6289, lng: -81.3615 },
+            "Kirtland, OH, USA": { lat: 41.6289, lng: -81.3615 },
             "La Venta, Mexico": { lat: 18.1, lng: -94.0333 },
             "Magdalena River, Colombia": { lat: 9.2410, lng: -74.4267 },
-            "Manti, UT": { lat: 39.2680, lng: -111.6387 },
-            "Mississippi River near St. Louis, MO": { lat: 38.6270, lng: -90.1994 },
-            "Montrose, IA": { lat: 40.0700, lng: -91.5200 },
-            "Nauvoo, IL (opposite)": { lat: 40.5500, lng: -91.3849 },
-            "Niagara Falls, NY": { lat: 43.0962, lng: -79.0377 },
+            "Manti, UT, USA": { lat: 39.2680, lng: -111.6387 },
+            "Mississippi River near St. Louis, MO, USA": { lat: 38.6270, lng: -90.1994 },
+            "Montrose, IA, USA": { lat: 40.0700, lng: -91.5200 },
+            "Nauvoo, IL (opposite), USA": { lat: 40.5500, lng: -91.3849 },
+            "Niagara Falls, NY, USA": { lat: 43.0962, lng: -79.0377 },
             "Palenque, Mexico": { lat: 17.5095, lng: -92.0461 },
             "Peten, Guatemala": { lat: 16.9120, lng: -89.8910 },
             "Quetzaltenango, Guatemala": { lat: 14.8360, lng: -91.5210 },
@@ -126,14 +257,14 @@
             "Sidon River Hypothesis (Usumacinta), Mexico": { lat: 17.2333, lng: -91.4167 },
             "Soto la Marina, Mexico": { lat: 23.7667, lng: -98.2167 },
             "Tabasco, Mexico": { lat: 17.9667, lng: -92.9167 },
-            "Tennessee River, TN": { lat: 35.1667, lng: -85.25 },
+            "Tennessee River, TN, USA": { lat: 35.1667, lng: -85.25 },
             "Tikal, Guatemala": { lat: 17.2221, lng: -89.6231 },
             "Tres Zapotes, Mexico": { lat: 18.4667, lng: -95.4333 },
             "Tuxtla Gutierrez, Mexico": { lat: 16.7597, lng: -93.1131 },
             "Usumacinta River, Mexico": { lat: 16.9167, lng: -91.0 },
             "Uxmal, Mexico": { lat: 20.4167, lng: -89.7667 },
             "Veracruz, Mexico": { lat: 19.1738, lng: -96.1342 },
-            "Zarahemla, IA (hypothetical)": { lat: 40.0167, lng: -91.5065 }
+            "Zarahemla, IA (hypothetical), USA": { lat: 40.0167, lng: -91.5065 }
         };
 
         const iconStyles = {
@@ -168,7 +299,6 @@
                            key === "Valley of Lemuel" || key === "River Laman" || key === "Bountiful (Old World)" || 
                            key === "Irreantum") ? jerusalemCoords.lng : zarahemlaCoords.lng;
 
-                // Old World locations
                 if (key === "Land of Jerusalem") lat += 0.05 * jerusalemScale, lng += 0.05 * jerusalemScale;
                 else if (key === "Wilderness") lat -= 0.7 * jerusalemScale;
                 else if (key === "Red Sea") lat -= 1.2 * jerusalemScale, lng += 0.5 * jerusalemScale;
@@ -176,7 +306,6 @@
                 else if (key === "River Laman") lat -= 1.05 * jerusalemScale, lng += 0.35 * jerusalemScale;
                 else if (key === "Bountiful (Old World)") lat -= 1.8 * jerusalemScale, lng += 1.2 * jerusalemScale;
                 else if (key === "Irreantum") lat -= 2.0 * jerusalemScale, lng += 1.3 * jerusalemScale;
-                // New World locations
                 else if (key === "Land of Nephi") lat -= 1.5 * zarahemlaScale;
                 else if (key === "Land of Bountiful (New World)") lat += 1.5 * zarahemlaScale;
                 else if (key === "Narrow Neck of Land") lat += 2.5 * zarahemlaScale;
@@ -264,19 +393,127 @@
             map.setView(focus === 'jerusalem' ? [jerusalemCoords.lat, jerusalemCoords.lng] : [zarahemlaCoords.lat, zarahemlaCoords.lng], 5);
         }
 
-        function setZarahemlaFromSelect(location) {
-            if (location === "custom") {
-                document.getElementById("customCoords").style.display = "inline";
-            } else {
-                document.getElementById("customCoords").style.display = "none";
-                zarahemlaCoords = zarahemlaLocations[location];
-                updateMap('zarahemla');
+        // Parse and sort locations by country, state/province, city
+        function parseAndSortLocations() {
+            return Object.keys(zarahemlaLocations).map(loc => {
+                const parts = loc.split(', ').map(part => part.trim());
+                let city = '', state = '', country = '';
+                if (parts.length === 3) {
+                    [city, state, country] = parts;
+                } else if (parts.length === 2) {
+                    [city, country] = parts;
+                    state = '';
+                } else {
+                    city = loc;
+                    country = '';
+                }
+                return { fullName: loc, city, state, country };
+            }).sort((a, b) => {
+                if (a.country !== b.country) return a.country.localeCompare(b.country);
+                if (a.state !== b.state) return a.state.localeCompare(b.state);
+                return a.city.localeCompare(b.city);
+            });
+        }
+
+        const searchInput = document.getElementById('zarahemlaSearch');
+        const searchResults = document.getElementById('search-results');
+        const advancedOptions = document.getElementById('advanced-options');
+        const mobileToggle = document.getElementById('mobile-toggle');
+
+        searchInput.addEventListener('click', () => {
+            const query = searchInput.value.toLowerCase().trim();
+            searchResults.innerHTML = '';
+
+            const sortedLocations = parseAndSortLocations();
+            sortedLocations.forEach(loc => {
+                const div = document.createElement('div');
+                div.className = 'search-result';
+                div.textContent = loc.fullName;
+                div.addEventListener('click', () => {
+                    setZarahemlaFromSearch(loc.fullName);
+                    searchResults.style.display = 'none';
+                    searchInput.value = loc.fullName;
+                });
+                searchResults.appendChild(div);
+            });
+            searchResults.style.display = 'block';
+        });
+
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase().trim();
+            searchResults.innerHTML = '';
+
+            if (query === '') {
+                const sortedLocations = parseAndSortLocations();
+                sortedLocations.forEach(loc => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result';
+                    div.textContent = loc.fullName;
+                    div.addEventListener('click', () => {
+                        setZarahemlaFromSearch(loc.fullName);
+                        searchResults.style.display = 'none';
+                        searchInput.value = loc.fullName;
+                    });
+                    searchResults.appendChild(div);
+                });
+                searchResults.style.display = 'block';
+                return;
             }
+
+            const matches = Object.keys(zarahemlaLocations).filter(loc => 
+                loc.toLowerCase().includes(query)
+            ).sort((a, b) => {
+                const aParts = a.split(', ').map(part => part.trim());
+                const bParts = b.split(', ').map(part => part.trim());
+                const aCountry = aParts.length > 1 ? aParts[aParts.length - 1] : '';
+                const bCountry = bParts.length > 1 ? bParts[bParts.length - 1] : '';
+                const aState = aParts.length > 2 ? aParts[aParts.length - 2] : '';
+                const bState = bParts.length > 2 ? bParts[bParts.length - 2] : '';
+                const aCity = aParts[0];
+                const bCity = bParts[0];
+
+                if (aCountry !== bCountry) return aCountry.localeCompare(bCountry);
+                if (aState !== bState) return aState.localeCompare(bState);
+                return aCity.localeCompare(bCity);
+            });
+
+            if (matches.length > 0) {
+                matches.forEach(loc => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result';
+                    div.textContent = loc;
+                    div.addEventListener('click', () => {
+                        setZarahemlaFromSearch(loc);
+                        searchResults.style.display = 'none';
+                        searchInput.value = loc;
+                    });
+                    searchResults.appendChild(div);
+                });
+                searchResults.style.display = 'block';
+            } else {
+                searchResults.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.style.display = 'none';
+            }
+            if (!mobileToggle.contains(e.target) && !advancedOptions.contains(e.target)) {
+                advancedOptions.classList.remove('active');
+            }
+        });
+
+        function setZarahemlaFromSearch(location) {
+            zarahemlaCoords = zarahemlaLocations[location];
+            document.getElementById('customLat').value = zarahemlaCoords.lat;
+            document.getElementById('customLng').value = zarahemlaCoords.lng;
+            updateMap('zarahemla');
         }
 
         function setZarahemlaCustom() {
-            const lat = parseFloat(document.getElementById("customLat").value);
-            const lng = parseFloat(document.getElementById("customLng").value);
+            const lat = parseFloat(document.getElementById('customLat').value);
+            const lng = parseFloat(document.getElementById('customLng').value);
 
             if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
                 alert("Please enter valid coordinates (Latitude: -90 to 90, Longitude: -180 to 180).");
@@ -284,7 +521,14 @@
             }
 
             zarahemlaCoords = { lat: lat, lng: lng };
+            searchInput.value = `Custom (${lat}, ${lng})`;
             updateMap('zarahemla');
+        }
+
+        function toggleAdvancedOptions() {
+            advancedOptions.classList.toggle('active');
+            mobileToggle.innerHTML = advancedOptions.classList.contains('active') ? 
+                '<i class="fas fa-chevron-up"></i>' : '<i class="fas fa-chevron-down"></i>';
         }
 
         updateMap('zarahemla');
